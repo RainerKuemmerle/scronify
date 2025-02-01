@@ -79,6 +79,7 @@ void ScreenHandler::CreateTrayIcon() {
   tray_icon_menu_->addAction(show_action_);
   tray_icon_menu_->addSeparator();
   // TODO(Rainer): Add about dialog
+  // TODO(Rainer): Add run option for screen tool like arandr
   tray_icon_menu_->addAction(quit_action_);
 
   tray_icon_ = new QSystemTrayIcon(this);
