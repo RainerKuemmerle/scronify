@@ -1,6 +1,6 @@
 #pragma once
 
-#include <qstring.h>
+#include <qstringlist.h>
 
 namespace scronify {
 
@@ -8,7 +8,7 @@ class Action {
  public:
   Action() = default;
 
-  QString command;
+  QStringList commands;
   double delay = 0.;
 };
 

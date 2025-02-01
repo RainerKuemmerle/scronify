@@ -13,6 +13,10 @@
 #include <qsystemtrayicon.h>
 #include <qtimer.h>
 
+#include <QCloseEvent>
+#include <QVBoxLayout>
+
+#include "scronify/action_widget.h"
 #include "scronify/moc_screen_handler.cpp"  // NOLINT
 
 namespace {
@@ -24,9 +28,11 @@ namespace scronify {
 
 ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
     : QDialog(parent, f) {
+  setModal(true);
   CreateTrayIcon();
+  CreateWidgets();
 
-  startup_.command = R"(notify-send "Hello World")";
+  startup_.commands.append(R"(notify-send "Hello World")");
   startup_.delay = 2;
 
   // TODO(Rainer): Read configuration file
@@ -45,6 +51,18 @@ void ScreenHandler::ScreenRemoved(QScreen* screen) {
   Run(remove_);
 }
 
+void ScreenHandler::CreateWidgets() {
+  startup_widget_ = new ActionWidget(tr("Startup"), this, &startup_);
+  connect_widget_ = new ActionWidget(tr("Connect Screen"), this, &connect_);
+  remove_widget_ = new ActionWidget(tr("Remove Screen"), this, &remove_);
+
+  auto* main_layout = new QVBoxLayout(this);
+  main_layout->addWidget(startup_widget_);
+  main_layout->addWidget(connect_widget_);
+  main_layout->addWidget(remove_widget_);
+  setLayout(main_layout);
+}
+
 void ScreenHandler::CreateTrayIcon() {
   // Actions
   quit_action_ = new QAction(tr("&Quit"), this);
@@ -52,10 +70,13 @@ void ScreenHandler::CreateTrayIcon() {
   rerun_startup_action_ = new QAction(tr("&Rerun Startup"), this);
   connect(rerun_startup_action_, &QAction::triggered, this,
           [this]() { RunInstant(startup_); });
+  show_action_ = new QAction(tr("&Configuration"), this);
+  connect(show_action_, &QAction::triggered, this, &ScreenHandler::show);
 
   // Menu
   tray_icon_menu_ = new QMenu(this);
   tray_icon_menu_->addAction(rerun_startup_action_);
+  tray_icon_menu_->addAction(show_action_);
   tray_icon_menu_->addSeparator();
   // TODO(Rainer): Add about dialog
   tray_icon_menu_->addAction(quit_action_);
@@ -68,7 +89,7 @@ void ScreenHandler::CreateTrayIcon() {
 void ScreenHandler::Run(const Action& action) {
   auto run_helper = [&action] { ScreenHandler::RunInstant(action); };
 
-  if (action.command.isEmpty()) {
+  if (action.commands.isEmpty()) {
     return;
   }
   if (action.delay > 0) {
@@ -79,19 +100,48 @@ void ScreenHandler::Run(const Action& action) {
 }
 
 void ScreenHandler::RunInstant(const Action& action) {
-  qDebug() << "Running " << action.command;
-  if (action.command.isEmpty()) {
+  // TODO(Rainer): Add environment variables such as action, screen info
+  if (action.commands.isEmpty()) {
     qDebug() << "Empty command.";
     return;
   }
-  auto run_process = [&action] {
-    QStringList command_list = QProcess::splitCommand(action.command);
-    const QString command = command_list.first();
-    command_list.removeFirst();
-    QProcess::execute(command, command_list);
-  };
-  QFuture<void> future = QtConcurrent::run(run_process);
+
+  for (const auto& cmd : action.commands) {
+    if (cmd.isEmpty()) {
+      continue;
+    }
+    qDebug() << "Running " << cmd;
+    auto run_process = [&cmd] {
+      QStringList command_list = QProcess::splitCommand(cmd);
+      const QString command = command_list.first();
+      command_list.removeFirst();
+      QProcess::execute(command, command_list);
+    };
+    QFuture<void> future = QtConcurrent::run(run_process);
+  }
+
   qDebug() << "Done.";
+}
+
+void ScreenHandler::closeEvent(QCloseEvent* e) {
+  if (!e->spontaneous() || !isVisible()) {
+    return;
+  }
+  qDebug() << "Updating Actions";
+  startup_widget_->UpdateAction();
+  connect_widget_->UpdateAction();
+  remove_widget_->UpdateAction();
+  hide();
+  e->ignore();
+}
+
+void ScreenHandler::showEvent(QShowEvent* e) {
+  if (!e->spontaneous()) {
+    qDebug() << "Update Widget";
+    startup_widget_->UpdateWidget();
+    connect_widget_->UpdateWidget();
+    remove_widget_->UpdateWidget();
+  }
 }
 
 }  // namespace scronify

@@ -18,6 +18,7 @@ find_package(Qt${SCRONIFY_QTVERSION} COMPONENTS Core Widgets Concurrent REQUIRED
 
 add_executable(scronify
 src/screen_handler.cpp
+src/action_widget.cpp
 src/main.cpp)
 
 target_compile_options(scronify PRIVATE -Wall -Wextra -pedantic)

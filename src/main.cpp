@@ -2,6 +2,7 @@
 #include <qcoreapplication.h>
 #include <qlogging.h>
 #include <qobject.h>
+#include <qsettings.h>
 
 #include <QThread>
 
@@ -11,6 +12,8 @@ int main(int argc, char* argv[]) {
   QApplication app(argc, argv);
   QCoreApplication::setApplicationName("Scronify");
   // QCoreApplication::setApplicationVersion(SCRONIFY_VERSION);
+
+  QSettings::setDefaultFormat(QSettings::IniFormat);
 
   scronify::ScreenHandler screen_handler;
 
