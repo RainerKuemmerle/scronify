@@ -9,6 +9,7 @@
 #include <qmenu.h>
 #include <qprocess.h>
 #include <qscreen.h>
+#include <qsettings.h>
 #include <qstringlist.h>
 #include <qsystemtrayicon.h>
 #include <qtimer.h>
@@ -16,12 +17,14 @@
 #include <QCloseEvent>
 #include <QVBoxLayout>
 
+#include "scronify/action.h"
 #include "scronify/action_widget.h"
 #include "scronify/moc_screen_handler.cpp"  // NOLINT
 
 namespace {
 constexpr double kSecToMs = 1000.;
-const QString kShell = "/bin/sh";
+const QString kSettingsOrg = "scronify";
+const QString kSettingsApp = "scronify";
 }  // namespace
 
 namespace scronify {
@@ -32,10 +35,7 @@ ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
   CreateTrayIcon();
   CreateWidgets();
 
-  startup_.commands.append(R"(notify-send "Hello World")");
-  startup_.delay = 2;
-
-  // TODO(Rainer): Read configuration file
+  ReadSettings();
 
   qDebug() << "Execute Startup";
   Run(startup_);
@@ -131,6 +131,7 @@ void ScreenHandler::closeEvent(QCloseEvent* e) {
   startup_widget_->UpdateAction();
   connect_widget_->UpdateAction();
   remove_widget_->UpdateAction();
+  WriteSettings();
   hide();
   e->ignore();
 }
@@ -142,6 +143,37 @@ void ScreenHandler::showEvent(QShowEvent* e) {
     connect_widget_->UpdateWidget();
     remove_widget_->UpdateWidget();
   }
+}
+
+void ScreenHandler::ReadSettings() {
+  QSettings settings(kSettingsOrg, kSettingsApp);
+
+  auto read_action_config = [&settings](const QString& group, Action& action) {
+    settings.beginGroup(group);
+    action.delay = settings.value("delay", action.delay).toDouble();
+    action.commands =
+        settings.value("commands", action.commands).toStringList();
+    settings.endGroup();
+  };
+
+  read_action_config("Startup", startup_);
+  read_action_config("Connect", connect_);
+  read_action_config("Remove", remove_);
+}
+
+void ScreenHandler::WriteSettings() {
+  QSettings settings(kSettingsOrg, kSettingsApp);
+
+  auto write_action_config = [&settings](const QString& group, Action& action) {
+    settings.beginGroup(group);
+    settings.setValue("delay", action.delay);
+    settings.setValue("commands", action.commands);
+    settings.endGroup();
+  };
+
+  write_action_config("Startup", startup_);
+  write_action_config("Connect", connect_);
+  write_action_config("Remove", remove_);
 }
 
 }  // namespace scronify

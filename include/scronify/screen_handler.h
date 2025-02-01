@@ -31,6 +31,9 @@ class ScreenHandler : public QDialog {
   void Run(const Action& action);
   static void RunInstant(const Action& action);
 
+  void ReadSettings();
+  void WriteSettings();
+
   QAction* quit_action_ = nullptr;
   QAction* rerun_startup_action_ = nullptr;
   QAction* show_action_ = nullptr;
