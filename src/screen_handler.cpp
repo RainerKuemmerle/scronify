@@ -132,8 +132,10 @@ void ScreenHandler::closeEvent(QCloseEvent* e) {
   connect_widget_->UpdateAction();
   remove_widget_->UpdateAction();
   WriteSettings();
-  hide();
-  e->ignore();
+  if (tray_icon_->isVisible()) {
+    hide();
+    e->ignore();
+  }
 }
 
 void ScreenHandler::showEvent(QShowEvent* e) {
