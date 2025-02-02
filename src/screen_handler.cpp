@@ -32,6 +32,7 @@ namespace scronify {
 
 ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
     : QDialog(parent, f) {
+  setWindowIcon(QIcon(":/doc/scronify-icon.png"));
   setModal(true);
   CreateTrayIcon();
   CreateWidgets();
@@ -89,6 +90,7 @@ void ScreenHandler::CreateTrayIcon() {
 
   tray_icon_ = new QSystemTrayIcon(this);
   tray_icon_->setContextMenu(tray_icon_menu_);
+  tray_icon_->setIcon(QIcon(":/doc/scronify-icon.png"));
   tray_icon_->show();
 }
 

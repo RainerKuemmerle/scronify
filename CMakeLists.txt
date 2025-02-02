@@ -17,6 +17,7 @@ find_package(Qt${SCRONIFY_QTVERSION} COMPONENTS Core Widgets Concurrent REQUIRED
 # ${CMAKE_CURRENT_SOURCE_DIR}/include/scronify/config.h)
 
 add_executable(scronify
+icons.qrc
 src/screen_handler.cpp
 src/action_widget.cpp
 src/main.cpp)
