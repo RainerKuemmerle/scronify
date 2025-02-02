@@ -21,6 +21,7 @@
 #include "scronify/action.h"
 #include "scronify/action_widget.h"
 #include "scronify/moc_screen_handler.cpp"  // NOLINT
+#include "scronify/split_command.h"
 
 namespace {
 constexpr double kSecToMs = 1000.;
@@ -120,7 +121,7 @@ void ScreenHandler::RunInstant(const Action& action) {
     }
     qDebug() << "Running " << cmd;
     auto run_process = [&cmd] {
-      QStringList command_list = QProcess::splitCommand(cmd);
+      QStringList command_list = util::SplitCommand(cmd);
       const QString command = command_list.first();
       command_list.removeFirst();
       QProcess::execute(command, command_list);

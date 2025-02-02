@@ -18,6 +18,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
 
 add_executable(scronify
 icons.qrc
+src/split_command.cpp
 src/screen_handler.cpp
 src/action_widget.cpp
 src/main.cpp)
