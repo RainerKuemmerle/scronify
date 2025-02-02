@@ -1,6 +1,6 @@
 #include <qapplication.h>
 #include <qcoreapplication.h>
-#include <qlogging.h>
+#include <qdebug.h>
 #include <qobject.h>
 #include <qsettings.h>
 
