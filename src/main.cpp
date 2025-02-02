@@ -6,12 +6,13 @@
 
 #include <QThread>
 
+#include "scronify/config.h"
 #include "scronify/screen_handler.h"
 
 int main(int argc, char* argv[]) {
   QApplication app(argc, argv);
   QCoreApplication::setApplicationName("Scronify");
-  // QCoreApplication::setApplicationVersion(SCRONIFY_VERSION);
+  QCoreApplication::setApplicationVersion(SCRONIFY_VERSION);
 
   QSettings::setDefaultFormat(QSettings::IniFormat);
 
