@@ -13,8 +13,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SCRONIFY_QTVERSION "6" CACHE STRING "Which Qt version to use. 6|5")
 find_package(Qt${SCRONIFY_QTVERSION} COMPONENTS Core Widgets Concurrent REQUIRED)
 
-# configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
-# ${CMAKE_CURRENT_SOURCE_DIR}/include/scronify/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
+ ${CMAKE_CURRENT_SOURCE_DIR}/include/scronify/config.h)
 
 add_executable(scronify
 icons.qrc
