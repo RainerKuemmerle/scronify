@@ -1,19 +1,19 @@
 #pragma once
 #include <qobject.h>
 #include <qtextedit.h>
+#include <qwidget.h>
 
 #include <QDoubleSpinBox>
-#include <QGroupBox>
 #include <QPlainTextEdit>
 
 #include "scronify/action.h"
 
 namespace scronify {
 
-class ActionWidget : public QGroupBox {
+class ActionWidget : public QWidget {
   Q_OBJECT
  public:
-  explicit ActionWidget(const QString& title, QWidget* parent, Action* action);
+  explicit ActionWidget(QWidget* parent, Action* action);
 
   void UpdateWidget();
   void UpdateAction();

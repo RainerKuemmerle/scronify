@@ -9,16 +9,19 @@
 
 #include "scronify/moc_action_widget.cpp"  // NOLINT
 
+namespace {
+constexpr double kMaxDelay = 10.;
+}
+
 namespace scronify {
 
-ActionWidget::ActionWidget(const QString& title, QWidget* parent,
-                           Action* action)
-    : QGroupBox(title, parent),
+ActionWidget::ActionWidget(QWidget* parent, Action* action)
+    : QWidget(parent),
       action_(action),
       delay_spinner_(new QDoubleSpinBox(this)),
       command_edit_(new QPlainTextEdit(this)) {
   delay_spinner_->setMinimum(0.);
-  delay_spinner_->setMaximum(10.);  // NOLINT
+  delay_spinner_->setMaximum(kMaxDelay);
 
   command_edit_->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 

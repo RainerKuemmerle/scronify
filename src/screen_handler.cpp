@@ -12,6 +12,7 @@
 #include <qsettings.h>
 #include <qstringlist.h>
 #include <qsystemtrayicon.h>
+#include <qtabwidget.h>
 #include <qtimer.h>
 
 #include <QCloseEvent>
@@ -52,14 +53,17 @@ void ScreenHandler::ScreenRemoved(QScreen* screen) {
 }
 
 void ScreenHandler::CreateWidgets() {
-  startup_widget_ = new ActionWidget(tr("Startup"), this, &startup_);
-  connect_widget_ = new ActionWidget(tr("Connect Screen"), this, &connect_);
-  remove_widget_ = new ActionWidget(tr("Remove Screen"), this, &remove_);
+  startup_widget_ = new ActionWidget(nullptr, &startup_);
+  connect_widget_ = new ActionWidget(nullptr, &connect_);
+  remove_widget_ = new ActionWidget(nullptr, &remove_);
+
+  auto* tab_widget = new QTabWidget(this);
+  tab_widget->addTab(startup_widget_, tr("Startup"));
+  tab_widget->addTab(connect_widget_, tr("Connect Screen"));
+  tab_widget->addTab(remove_widget_, tr("Remove Screen"));
 
   auto* main_layout = new QVBoxLayout(this);
-  main_layout->addWidget(startup_widget_);
-  main_layout->addWidget(connect_widget_);
-  main_layout->addWidget(remove_widget_);
+  main_layout->addWidget(tab_widget);
   setLayout(main_layout);
 }
 
@@ -80,6 +84,7 @@ void ScreenHandler::CreateTrayIcon() {
   tray_icon_menu_->addSeparator();
   // TODO(Rainer): Add about dialog
   // TODO(Rainer): Add run option for screen tool like arandr
+  // TODO(Rainer): Add pause button to not execute actions
   tray_icon_menu_->addAction(quit_action_);
 
   tray_icon_ = new QSystemTrayIcon(this);
