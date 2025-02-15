@@ -8,8 +8,11 @@
 
 #include "scronify/action.h"
 #include "scronify/action_widget.h"
+#include "scronify/x11_event.h"
 
 namespace scronify {
+
+class X11Event;
 
 class ScreenHandler : public QDialog {
   Q_OBJECT
@@ -18,8 +21,9 @@ class ScreenHandler : public QDialog {
                          Qt::WindowFlags f = Qt::WindowFlags());
 
  public slots:  // NOLINT
-  void ScreenAdded(QScreen* screen);
-  void ScreenRemoved(QScreen* screen);
+  void ScreenAdded();
+  void ScreenRemoved();
+  void AppQuit();
 
  protected:
   void closeEvent(QCloseEvent* e) override;
@@ -49,6 +53,8 @@ class ScreenHandler : public QDialog {
 
   Action remove_;
   ActionWidget* remove_widget_ = nullptr;
+
+  X11Event* x11event_ = nullptr;
 };
 
 }  // namespace scronify

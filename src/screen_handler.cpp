@@ -3,10 +3,12 @@
 #include <QtConcurrent/qtconcurrentrun.h>
 #include <qaction.h>
 #include <qapplication.h>
+#include <qcoreapplication.h>
 #include <qdebug.h>
 #include <qdialog.h>
 #include <qlogging.h>
 #include <qmenu.h>
+#include <qobjectdefs.h>
 #include <qprocess.h>
 #include <qscreen.h>
 #include <qsettings.h>
@@ -22,6 +24,7 @@
 #include "scronify/action_widget.h"
 #include "scronify/moc_screen_handler.cpp"  // NOLINT
 #include "scronify/split_command.h"
+#include "scronify/x11_event.h"
 
 namespace {
 constexpr double kSecToMs = 1000.;
@@ -32,7 +35,7 @@ const QString kSettingsApp = "scronify";
 namespace scronify {
 
 ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
-    : QDialog(parent, f) {
+    : QDialog(parent, f), x11event_(new X11Event(this)) {
   setWindowIcon(QIcon(":/doc/scronify-icon.png"));
   setModal(true);
   CreateTrayIcon();
@@ -42,15 +45,27 @@ ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
 
   qDebug() << "Execute Startup";
   Run(startup_);
+
+  // Signals
+  connect(x11event_, SIGNAL(ScreenAdded()), this, SLOT(ScreenAdded()));
+  connect(x11event_, SIGNAL(ScreenRemoved()), this, SLOT(ScreenRemoved()));
+  connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(AppQuit()));
+
+  x11event_->start();
 }
 
-void ScreenHandler::ScreenAdded(QScreen* screen) {
-  qDebug() << "Added " << screen->manufacturer() << " " << screen->model();
+void ScreenHandler::AppQuit() {
+  qDebug() << "About to quit";
+  x11event_->requestInterruption();
+}
+
+void ScreenHandler::ScreenAdded() {
+  qDebug() << "Added Screen";
   Run(connect_);
 }
 
-void ScreenHandler::ScreenRemoved(QScreen* screen) {
-  qDebug() << "Removed " << screen->manufacturer() << " " << screen->model();
+void ScreenHandler::ScreenRemoved() {
+  qDebug() << "Removed Screen";
   Run(remove_);
 }
 

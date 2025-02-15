@@ -21,12 +21,14 @@ icons.qrc
 src/split_command.cpp
 src/screen_handler.cpp
 src/action_widget.cpp
+src/x11_event.cpp
 src/main.cpp)
 
 target_compile_options(scronify PRIVATE -Wall -Wextra -pedantic)
 target_include_directories(scronify PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(scronify PRIVATE Qt${SCRONIFY_QTVERSION}::Core
     Qt${SCRONIFY_QTVERSION}::Widgets)
+target_link_libraries(scronify PRIVATE X11 Xrandr)
 
 include(GNUInstallDirs)
 install(TARGETS scronify
