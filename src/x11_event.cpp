@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include "scronify/moc_x11_event.cpp"  // NOLINT
+#include "scronify/output_connection.h"
 
 // must be last
 #include <X11/Xlib.h>
@@ -14,7 +15,7 @@
 #include <qobject.h>
 
 namespace {
-std::string_view ConnectionToStr(int c) {
+QString ConnectionToStr(int c) {
   switch (c) {
     case 0:
       return "connected";
@@ -27,6 +28,17 @@ std::string_view ConnectionToStr(int c) {
 }  // namespace
 
 namespace scronify {
+
+using ScreenResourcePtr =
+    std::unique_ptr<XRRScreenResources, void (*)(XRRScreenResources*)>;
+using OutputInfoPtr = std::unique_ptr<XRROutputInfo, void (*)(XRROutputInfo*)>;
+
+struct ScreenHandle {
+  ScreenHandle(ScreenResourcePtr sr, OutputInfoPtr oi)
+      : screen_resource(std::move(sr)), output_info(std::move(oi)) {}
+  ScreenResourcePtr screen_resource;
+  OutputInfoPtr output_info;
+};
 
 X11Event::X11Event(QObject* parent) : QThread(parent) {}
 
@@ -52,16 +64,16 @@ void X11Event::run() {
         auto* output_change_notify =
             reinterpret_cast<XRROutputChangeNotifyEvent*>(&ev);  // NOLINT
 
-        std::unique_ptr<XRRScreenResources, void (*)(XRRScreenResources*)>
-            screen_resource(XRRGetScreenResources(output_change_notify->display,
-                                                  output_change_notify->window),
-                            XRRFreeScreenResources);
+        ScreenResourcePtr screen_resource(
+            XRRGetScreenResources(output_change_notify->display,
+                                  output_change_notify->window),
+            XRRFreeScreenResources);
         if (screen_resource == nullptr) {
           qWarning() << "Could not get screen resources";
           continue;
         }
 
-        std::unique_ptr<XRROutputInfo, void (*)(XRROutputInfo*)> output_info(
+        OutputInfoPtr output_info(
             XRRGetOutputInfo(output_change_notify->display,
                              screen_resource.get(),
                              output_change_notify->output),
@@ -76,12 +88,15 @@ void X11Event::run() {
                  << output_name << " "
                  << ConnectionToStr(output_info->connection);
 
-        switch (output_info->connection) {
+        const int connection = output_info->connection;
+        ScreenHandle screen_handle(std::move(screen_resource),
+                                   std::move(output_info));
+        switch (connection) {
           case 0:  // connected
-            emit ScreenAdded();
+            Connect(output_change_notify->output, screen_handle);
             break;
           case 1:  // disconnected
-            emit ScreenRemoved();
+            Removed(output_change_notify->output, screen_handle);
             break;
           default:
             qWarning() << "Unknown connection type";
@@ -89,6 +104,28 @@ void X11Event::run() {
       }
     }
   }
+}
+
+void X11Event::Connect(std::uint64_t output, const ScreenHandle& handle) {
+  auto found_it = cached_output_.find(output);
+
+  bool already_connected = found_it != cached_output_.end();
+  const OutputConnection&
+      connection =  // TODO(Rainer) generate correct connection
+      already_connected ? found_it->second : OutputConnection();
+
+  cached_output_[output] = connection;
+
+  if (!already_connected) {
+    // TODO debounce
+    emit ScreenAdded();
+  }
+}
+
+void X11Event::Removed(std::uint64_t output, const ScreenHandle& handle) {
+  // TODO remove
+  emit ScreenRemoved();
+  cached_output_.erase(output);
 }
 
 }  // namespace scronify
