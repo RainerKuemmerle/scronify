@@ -18,12 +18,6 @@ int main(int argc, char* argv[]) {
 
   scronify::ScreenHandler screen_handler;
 
-  // Signals
-  QObject::connect(&app, SIGNAL(screenAdded(QScreen*)), &screen_handler,
-                   SLOT(ScreenAdded(QScreen*)));
-  QObject::connect(&app, SIGNAL(screenRemoved(QScreen*)), &screen_handler,
-                   SLOT(ScreenRemoved(QScreen*)));
-
   qDebug() << "Entering main loop";
   return QApplication::exec();
 }
