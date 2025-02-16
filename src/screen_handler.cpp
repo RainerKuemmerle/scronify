@@ -55,8 +55,10 @@ ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
 }
 
 void ScreenHandler::AppQuit() {
-  qDebug() << "About to quit";
+  qDebug() << "About to quit, waiting for thread";
   x11event_->requestInterruption();
+  x11event_->wait();
+  qDebug() << "Byebye";
 }
 
 void ScreenHandler::ScreenAdded() {

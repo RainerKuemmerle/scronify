@@ -21,6 +21,7 @@ icons.qrc
 src/split_command.cpp
 src/screen_handler.cpp
 src/action_widget.cpp
+src/event.cpp
 src/x11_event.cpp
 src/main.cpp)
 
