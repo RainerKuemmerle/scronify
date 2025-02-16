@@ -11,14 +11,19 @@ Another typical use-case is to adjust the screen layout.
 
 ## Compilation
 
-`scronify` only depends on Qt either in version 5 or 6. In particular, we require the modules core, gui, and concurrent.
+`scronify` depends on Qt either in version 5 or 6. In particular, we require the modules core, gui, and concurrent.
+
+Furthermore, for the connection events using X11, we depend on:
+* libx11-dev
+* libxrandr-dev
+
 
 On Debian/Ubuntu you can install the required Qt development files with
 ```
 # Qt6
-sudo apt install qt6-base-dev
+sudo apt install qt6-base-dev libx11-dev libxrandr-dev
 # Qt5
-sudo apt install qtbase5-dev
+sudo apt install qtbase5-dev libx11-dev libxrandr-dev
 ```
 
 Building follows the standard pattern of a CMake based project. For example, on Linux with the default Makefile generator.
