@@ -13,13 +13,8 @@ enum class EventType : std::uint8_t {
   kUnknown,
 };
 
-class Event : public QObject {
-  Q_OBJECT
- public:
-  explicit Event(QObject* parent = nullptr);
+struct Event {
   EventType type = EventType::kUnknown;
-  QTimer* timer;
-  bool timer_connected;
   OutputConnection connection;
 };
 

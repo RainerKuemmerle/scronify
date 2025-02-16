@@ -27,11 +27,16 @@ class X11Event : public QThread {
   std::unordered_map<std::uint64_t, Event> cached_output_;
   QMutex cached_output_mutex_;
 
+  std::unordered_map<std::uint64_t, int> debounced_event_;
+  QMutex debounced_event_mutex_;
+
   void run() override;
   void Connect(std::uint64_t output, const ScreenHandle& handle);
   void Removed(std::uint64_t output, const ScreenHandle& handle);
-  void SetupDebounce(std::uint64_t output, Event& event);
+
+  void SetupDebounce(std::uint64_t output);
   void Debounced(std::uint64_t output);
+  void TickDebounce();
 };
 
 }  // namespace scronify
