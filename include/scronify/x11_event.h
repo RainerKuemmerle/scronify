@@ -1,11 +1,14 @@
 #pragma once
 
+#include <qmutex.h>
+#include <qobject.h>
 #include <qthread.h>
+#include <qtimer.h>
 
 #include <cstdint>
 #include <unordered_map>
 
-#include "scronify/output_connection.h"
+#include "scronify/event.h"
 
 namespace scronify {
 
@@ -21,11 +24,14 @@ class X11Event : public QThread {
   void ScreenRemoved();
 
  protected:
-  std::unordered_map<std::uint64_t, OutputConnection> cached_output_;
+  std::unordered_map<std::uint64_t, Event> cached_output_;
+  QMutex cached_output_mutex_;
 
   void run() override;
   void Connect(std::uint64_t output, const ScreenHandle& handle);
   void Removed(std::uint64_t output, const ScreenHandle& handle);
+  void SetupDebounce(std::uint64_t output, Event& event);
+  void Debounced(std::uint64_t output);
 };
 
 }  // namespace scronify
