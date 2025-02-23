@@ -35,6 +35,7 @@ constexpr int kDebounceTicks = 2;
 
 namespace scronify {
 
+using DisplayPtr = std::unique_ptr<Display, int (*)(Display*)>;
 using ScreenResourcePtr =
     std::unique_ptr<XRRScreenResources, void (*)(XRRScreenResources*)>;
 using OutputInfoPtr = std::unique_ptr<XRROutputInfo, void (*)(XRROutputInfo*)>;
@@ -94,13 +95,14 @@ void GetConnectionDetails(RROutput out, const ScreenHandle& handle,
 X11Event::X11Event(QObject* parent) : QThread(parent) {}
 
 void X11Event::run() {
-  Display* display = XOpenDisplay(nullptr);
-  XRRSelectInput(display, DefaultRootWindow(display), RROutputChangeNotifyMask);
-  XSync(display, False);
+  DisplayPtr display(XOpenDisplay(nullptr), XCloseDisplay);
+  XRRSelectInput(display.get(), DefaultRootWindow(display.get()),
+                 RROutputChangeNotifyMask);
+  XSync(display.get(), False);
 
   while (!QThread::currentThread()->isInterruptionRequested()) {
     TickDebounce();
-    const int num_events = XEventsQueued(display, QueuedAfterFlush);
+    const int num_events = XEventsQueued(display.get(), QueuedAfterFlush);
     if (num_events <= 0) {
       msleep(kSleepMs);
       continue;
@@ -108,7 +110,7 @@ void X11Event::run() {
 
     for (int i = 0; i < num_events; ++i) {
       XEvent ev;
-      if (XNextEvent(display, &ev)) {
+      if (XNextEvent(display.get(), &ev)) {
         qWarning("Error while fetching XNextEvent");
         continue;
       }
@@ -139,7 +141,7 @@ void X11Event::run() {
                << ConnectionToStr(output_info->connection);
 
       const int connection = output_info->connection;
-      ScreenHandle screen_handle(display, std::move(screen_resource),
+      ScreenHandle screen_handle(display.get(), std::move(screen_resource),
                                  std::move(output_info));
       switch (connection) {
         case 0:  // connected
