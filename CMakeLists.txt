@@ -22,7 +22,17 @@ src/split_command.cpp
 src/screen_handler.cpp
 src/action_widget.cpp
 src/x11_event.cpp
+src/wayland_event.cpp
 src/main.cpp)
+
+option(ENABLE_WAYLAND "Build with Wayland support" ON)
+if(ENABLE_WAYLAND)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(WAYLAND REQUIRED wayland-client)
+    target_include_directories(scronify PRIVATE ${WAYLAND_INCLUDE_DIRS})
+    target_link_libraries(scronify PRIVATE ${WAYLAND_LIBRARIES})
+    target_compile_definitions(scronify PRIVATE HAVE_WAYLAND)
+endif()
 
 target_compile_options(scronify PRIVATE -Wall -Wextra -pedantic)
 target_include_directories(scronify PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
