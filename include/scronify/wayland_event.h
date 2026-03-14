@@ -19,7 +19,6 @@ class WaylandEvent : public DisplayEvent {
   explicit WaylandEvent(QObject* parent = nullptr);
 
   // Public helpers used by Wayland listeners to update state.
- public:
   void Connect(std::uint64_t output);
   void Removed(std::uint64_t output);
   void UpdateMetadata(std::uint64_t output, const OutputConnection& conn);

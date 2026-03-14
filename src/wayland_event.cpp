@@ -6,11 +6,13 @@
 #include "scronify/moc_wayland_event.cpp"  // NOLINT
 
 #if defined(HAVE_WAYLAND)
+#include <poll.h>
 #include <wayland-client.h>
 
 #include <algorithm>
 #include <cstring>
 #include <map>
+#include <memory>
 #endif
 
 namespace {
@@ -30,7 +32,7 @@ struct WaylandContext {
 
 struct ListenerData {
   scronify::WaylandEvent* self;
-  WaylandContext* ctx;
+  std::unique_ptr<WaylandContext> ctx;
 };
 
 void OutputHandleGeometry(void* data, wl_output* wl_output_ptr, int /*x*/,
@@ -119,6 +121,35 @@ void RegistryGlobalRemove(void* data, wl_registry* /*registry*/,
 
 const wl_registry_listener kRegistryListener = {RegistryGlobal,
                                                 RegistryGlobalRemove};
+
+bool HandleWaylandEvents(WaylandContext* ctx) {
+  if (ctx && ctx->display) {
+    int fd = wl_display_get_fd(ctx->display);
+    if (fd >= 0) {
+      struct pollfd pfd{};
+      pfd.fd = fd;
+      pfd.events = POLLIN;
+      int ret = poll(&pfd, 1, kSleepMs);
+      if (ret > 0) {
+        if (pfd.revents & POLLIN) {
+          wl_display_dispatch(ctx->display);
+        }
+      } else if (ret == 0) {
+        // timeout, nothing to do
+      } else {
+        wl_display_dispatch_pending(ctx->display);
+      }
+      wl_display_flush(ctx->display);
+      return true;
+    }
+    // No valid fd; dispatch pending events and sleep.
+    wl_display_dispatch_pending(ctx->display);
+    wl_display_flush(ctx->display);
+    scronify::WaylandEvent::msleep(kSleepMs);
+    return true;
+  }
+  return false;
+}
 }  // namespace
 #endif
 
@@ -129,19 +160,18 @@ WaylandEvent::WaylandEvent(QObject* parent) : DisplayEvent(parent) {}
 void WaylandEvent::run() {
   qDebug() << "WaylandEvent thread started";
 #if defined(HAVE_WAYLAND)
-  WaylandContext* ctx = new WaylandContext();
-  ListenerData* ld = new ListenerData{this, ctx};
+  auto ld = std::make_unique<ListenerData>(
+      ListenerData{this, std::make_unique<WaylandContext>()});
 
+  WaylandContext* ctx = ld->ctx.get();
   ctx->display = wl_display_connect(nullptr);
   if (!ctx->display) {
     qWarning() << "Failed to connect to Wayland display";
-    delete ld;
-    delete ctx;
     return;
   }
 
   ctx->registry = wl_display_get_registry(ctx->display);
-  wl_registry_add_listener(ctx->registry, &kRegistryListener, ld);
+  wl_registry_add_listener(ctx->registry, &kRegistryListener, ld.get());
   // Do an initial roundtrip to populate existing globals
   wl_display_roundtrip(ctx->display);
 #else
@@ -150,14 +180,13 @@ void WaylandEvent::run() {
 
   while (!QThread::currentThread()->isInterruptionRequested()) {
     TickDebounce();
+    bool handled = false;
 #if defined(HAVE_WAYLAND)
-    // Dispatch pending Wayland events without blocking.
-    if (ctx && ctx->display) {
-      wl_display_dispatch_pending(ctx->display);
-      wl_display_flush(ctx->display);
-    }
+    handled = HandleWaylandEvents(ctx);
 #endif
-    msleep(kSleepMs);
+    if (!handled) {
+      msleep(kSleepMs);
+    }
   }
 
   qDebug() << "WaylandEvent thread stopping";
@@ -176,8 +205,6 @@ void WaylandEvent::run() {
     if (ctx->display) {
       wl_display_disconnect(ctx->display);
     }
-    delete ld;
-    delete ctx;
   }
 #endif
 }
