@@ -13,17 +13,19 @@ Another typical use-case is to adjust the screen layout.
 
 `scronify` depends on Qt either in version 5 or 6. In particular, we require the modules core, gui, and concurrent.
 
-Furthermore, for the connection events using X11, we depend on:
+For the connection events using X11, we depend on:
 * libx11-dev
 * libxrandr-dev
 
+For the connection events using wayland, we depend on:
+* libwayland-dev
 
 On Debian/Ubuntu you can install the required Qt development files with
 ```
 # Qt6
-sudo apt install qt6-base-dev libx11-dev libxrandr-dev
+sudo apt install qt6-base-dev libx11-dev libxrandr-dev libwayland-dev
 # Qt5
-sudo apt install qtbase5-dev libx11-dev libxrandr-dev
+sudo apt install qtbase5-dev libx11-dev libxrandr-dev libwayland-dev
 ```
 
 Building follows the standard pattern of a CMake based project. For example, on Linux with the default Makefile generator.
