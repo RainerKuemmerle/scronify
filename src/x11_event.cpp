@@ -20,11 +20,11 @@ namespace {
 QString ConnectionToStr(int c) {
   switch (c) {
     case 0:
-      return "connected";
+      return QString::fromLatin1("connected");
     case 1:
-      return "disconnected";
+      return QString::fromLatin1("disconnected");
     default:
-      return "unknown";
+      return QString::fromLatin1("unknown");
   }
 }
 
@@ -158,17 +158,22 @@ void X11Event::run() {
 }
 
 void X11Event::Connect(std::uint64_t output, const ScreenHandle& handle) {
-  QMutexLocker locker(&cached_output_mutex_);
-  cached_output_[output].type = EventType::kConnected;
-  cached_output_[output].connection.output_name =
-      QString(handle.output_info->name).trimmed();
-  GetConnectionDetails(output, handle, cached_output_[output].connection);
-  SetupDebounce(output);
+  UpdateCache(output, EventType::kConnected, &handle);
 }
 
 void X11Event::Removed(std::uint64_t output, const ScreenHandle& /*handle*/) {
+  UpdateCache(output, EventType::kRemoved, nullptr);
+}
+
+void X11Event::UpdateCache(std::uint64_t output, EventType type,
+                           const ScreenHandle* handle) {
   QMutexLocker locker(&cached_output_mutex_);
-  cached_output_[output].type = EventType::kRemoved;
+  cached_output_[output].type = type;
+  if (handle) {
+    cached_output_[output].connection.output_name =
+        QString(handle->output_info->name).trimmed();
+    GetConnectionDetails(output, *handle, cached_output_[output].connection);
+  }
   SetupDebounce(output);
 }
 
