@@ -8,11 +8,11 @@
 
 #include "scronify/action.h"
 #include "scronify/action_widget.h"
-#include "scronify/x11_event.h"
+#include "scronify/display_event.h"
 
 namespace scronify {
 
-class X11Event;
+class DisplayEvent;
 
 class ScreenHandler : public QDialog {
   Q_OBJECT
@@ -54,7 +54,7 @@ class ScreenHandler : public QDialog {
   Action remove_;
   ActionWidget* remove_widget_ = nullptr;
 
-  X11Event* x11event_ = nullptr;
+  DisplayEvent* event_ = nullptr;
 };
 
 }  // namespace scronify

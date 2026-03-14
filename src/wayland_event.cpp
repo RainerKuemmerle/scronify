@@ -124,7 +124,7 @@ const wl_registry_listener kRegistryListener = {RegistryGlobal,
 
 namespace scronify {
 
-WaylandEvent::WaylandEvent(QObject* parent) : QThread(parent) {}
+WaylandEvent::WaylandEvent(QObject* parent) : DisplayEvent(parent) {}
 
 void WaylandEvent::run() {
   qDebug() << "WaylandEvent thread started";

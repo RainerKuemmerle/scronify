@@ -8,20 +8,17 @@
 #include <cstdint>
 #include <unordered_map>
 
+#include "scronify/display_event.h"
 #include "scronify/event.h"
 
 namespace scronify {
 
 struct ScreenHandle;
 
-class X11Event : public QThread {
+class X11Event : public DisplayEvent {
   Q_OBJECT
  public:
   explicit X11Event(QObject* parent = nullptr);
-
- signals:
-  void ScreenAdded();
-  void ScreenRemoved();
 
  protected:
   std::unordered_map<std::uint64_t, Event> cached_output_;
