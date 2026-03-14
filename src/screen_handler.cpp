@@ -22,8 +22,10 @@
 
 #include "scronify/action.h"
 #include "scronify/action_widget.h"
+#include "scronify/display_event.h"
 #include "scronify/moc_screen_handler.cpp"  // NOLINT
 #include "scronify/split_command.h"
+#include "scronify/wayland_event.h"
 #include "scronify/x11_event.h"
 
 namespace {
@@ -35,7 +37,7 @@ const QString kSettingsApp = "scronify";
 namespace scronify {
 
 ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
-    : QDialog(parent, f), x11event_(new X11Event(this)) {
+    : QDialog(parent, f) {
   setWindowIcon(QIcon(":/doc/scronify-icon.png"));
   setModal(true);
   CreateTrayIcon();
@@ -47,17 +49,27 @@ ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
   Run(startup_);
 
   // Signals
-  connect(x11event_, SIGNAL(ScreenAdded()), this, SLOT(ScreenAdded()));
-  connect(x11event_, SIGNAL(ScreenRemoved()), this, SLOT(ScreenRemoved()));
-  connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(AppQuit()));
+  // Choose backend based on platform; default to X11 when unsure.
+  const QString platform = QGuiApplication::platformName().toLower();
+  if (platform.contains("wayland")) {
+    event_ = new WaylandEvent(this);
+    qDebug() << "Using WaylandEvent backend";
+  } else {
+    event_ = new X11Event(this);
+    qDebug() << "Using X11Event backend";
+  }
 
-  x11event_->start();
+  connect(event_, SIGNAL(ScreenAdded()), this, SLOT(ScreenAdded()));
+  connect(event_, SIGNAL(ScreenRemoved()), this, SLOT(ScreenRemoved()));
+  connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(AppQuit()));
+  event_->start();
 }
 
 void ScreenHandler::AppQuit() {
   qDebug() << "About to quit, waiting for thread";
-  x11event_->requestInterruption();
-  x11event_->wait();
+  if (event_) {
+    event_->Shutdown();
+  }
   qDebug() << "Byebye";
 }
 

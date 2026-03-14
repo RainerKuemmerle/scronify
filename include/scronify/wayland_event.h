@@ -8,18 +8,15 @@
 #include <cstdint>
 #include <unordered_map>
 
+#include "scronify/display_event.h"
 #include "scronify/event.h"
 
 namespace scronify {
 
-class WaylandEvent : public QThread {
+class WaylandEvent : public DisplayEvent {
   Q_OBJECT
  public:
   explicit WaylandEvent(QObject* parent = nullptr);
-
- signals:
-  void ScreenAdded();
-  void ScreenRemoved();
 
   // Public helpers used by Wayland listeners to update state.
  public:

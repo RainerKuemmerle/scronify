@@ -92,7 +92,7 @@ void GetConnectionDetails(RROutput out, const ScreenHandle& handle,
 }
 }  // namespace
 
-X11Event::X11Event(QObject* parent) : QThread(parent) {}
+X11Event::X11Event(QObject* parent) : DisplayEvent(parent) {}
 
 void X11Event::run() {
   DisplayPtr display(XOpenDisplay(nullptr), XCloseDisplay);
