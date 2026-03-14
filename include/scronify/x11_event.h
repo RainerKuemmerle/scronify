@@ -34,6 +34,8 @@ class X11Event : public QThread {
   void Connect(std::uint64_t output, const ScreenHandle& handle);
   void Removed(std::uint64_t output, const ScreenHandle& handle);
 
+  void UpdateCache(std::uint64_t output, EventType type,
+                   const ScreenHandle* handle = nullptr);
   void SetupDebounce(std::uint64_t output);
   void Debounced(std::uint64_t output);
   void TickDebounce();
