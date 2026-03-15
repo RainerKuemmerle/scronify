@@ -13,7 +13,7 @@ Another typical use-case is to adjust the screen layout.
 
 `scronify` depends on Qt either in version 5 or 6. In particular, we require the modules core, gui, and concurrent.
 
-For the connection events using X11, we depend on:
+For the connection events using X11, we depend on (optional):
 * libx11-dev
 * libxrandr-dev
 
@@ -37,6 +37,11 @@ make
 ```
 
 You can use `cmake -DSCRONIFY_QTVERSION=5 ..` to use Qt5 instead of the default Qt6.
+
+If you don't want to build X11 support, pass `-DENABLE_X11=OFF` to CMake.
+The default is `ON`.
+
+Similarly, if you do not want to build the Wayland support, pass `-DENABLE_WAYLAND=OFF` to CMake. The default is `ON`.
 
 ## The name
 
