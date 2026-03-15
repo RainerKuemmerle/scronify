@@ -28,7 +28,9 @@
 #include "scronify/moc_screen_handler.cpp"  // NOLINT
 #include "scronify/split_command.h"
 #include "scronify/wayland_event.h"
+#if defined(HAVE_X11)
 #include "scronify/x11_event.h"
+#endif
 
 namespace {
 constexpr double kSecToMs = 1000.;
@@ -56,19 +58,29 @@ ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
   Run(startup_);
 
   // Signals
-  // Choose backend based on platform; default to X11 when unsure.
+  // Choose backend based on platform; prefer Wayland when available.
   if (IsWayland()) {
+#if defined(HAVE_WAYLAND)
     event_ = new WaylandEvent(this);
     qDebug() << "Using WaylandEvent backend";
+#else
+    qWarning() << "Wayland support not available at build time.";
+#endif
   } else {
+#if defined(HAVE_X11)
     event_ = new X11Event(this);
     qDebug() << "Using X11Event backend";
+#else
+    qWarning() << "X11 support not available at build time.";
+#endif
   }
 
-  connect(event_, SIGNAL(ScreenAdded()), this, SLOT(ScreenAdded()));
-  connect(event_, SIGNAL(ScreenRemoved()), this, SLOT(ScreenRemoved()));
-  connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(AppQuit()));
-  event_->start();
+  if (event_) {
+    connect(event_, SIGNAL(ScreenAdded()), this, SLOT(ScreenAdded()));
+    connect(event_, SIGNAL(ScreenRemoved()), this, SLOT(ScreenRemoved()));
+    connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(AppQuit()));
+    event_->start();
+  }
 }
 
 void ScreenHandler::AppQuit() {

@@ -1,26 +1,22 @@
 #include "scronify/wayland_event.h"
 
+#include <poll.h>
 #include <qdebug.h>
 #include <qlogging.h>
-
-#include "scronify/moc_wayland_event.cpp"  // NOLINT
-
-#if defined(HAVE_WAYLAND)
-#include <poll.h>
 #include <wayland-client.h>
 
 #include <algorithm>
 #include <cstring>
 #include <map>
 #include <memory>
-#endif
+
+#include "scronify/moc_wayland_event.cpp"  // NOLINT
 
 namespace {
 constexpr int kSleepMs = 500;
 constexpr int kDebounceTicks = 2;
 }  // namespace
 
-#if defined(HAVE_WAYLAND)
 namespace {
 struct WaylandContext {
   wl_display* display = nullptr;
@@ -151,7 +147,6 @@ bool HandleWaylandEvents(WaylandContext* ctx) {
   return false;
 }
 }  // namespace
-#endif
 
 namespace scronify {
 
@@ -159,7 +154,6 @@ WaylandEvent::WaylandEvent(QObject* parent) : DisplayEvent(parent) {}
 
 void WaylandEvent::run() {
   qDebug() << "WaylandEvent thread started";
-#if defined(HAVE_WAYLAND)
   auto ld = std::make_unique<ListenerData>(
       ListenerData{this, std::make_unique<WaylandContext>()});
 
@@ -174,16 +168,10 @@ void WaylandEvent::run() {
   wl_registry_add_listener(ctx->registry, &kRegistryListener, ld.get());
   // Do an initial roundtrip to populate existing globals
   wl_display_roundtrip(ctx->display);
-#else
-  qWarning() << "Wayland support not available at build time.";
-#endif
 
   while (!QThread::currentThread()->isInterruptionRequested()) {
     TickDebounce();
-    bool handled = false;
-#if defined(HAVE_WAYLAND)
-    handled = HandleWaylandEvents(ctx);
-#endif
+    bool handled = HandleWaylandEvents(ctx);
     if (!handled) {
       msleep(kSleepMs);
     }
@@ -191,7 +179,6 @@ void WaylandEvent::run() {
 
   qDebug() << "WaylandEvent thread stopping";
 
-#if defined(HAVE_WAYLAND)
   // Cleanup Wayland resources
   if (ctx) {
     if (ctx->registry) {
@@ -206,7 +193,6 @@ void WaylandEvent::run() {
       wl_display_disconnect(ctx->display);
     }
   }
-#endif
 }
 
 void WaylandEvent::UpdateCache(std::uint64_t output, EventType type) {

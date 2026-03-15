@@ -14,11 +14,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        qt:
-          - version: 5
+        include:
+          - qt_version: 5
             packages: qtbase5-dev libxrandr-dev libx11-dev
-          - version: 6
+            cmake_args: -DENABLE_X11=ON -DENABLE_WAYLAND=OFF
+          - qt_version: 5
+            packages: qtbase5-dev libwayland-dev
+            cmake_args: -DENABLE_X11=OFF -DENABLE_WAYLAND=ON
+          - qt_version: 6
             packages: qt6-base-dev libglx-dev libgl1-mesa-dev libxrandr-dev libx11-dev
+            cmake_args: -DENABLE_X11=ON -DENABLE_WAYLAND=OFF
+          - qt_version: 6
+            packages: qt6-base-dev libglx-dev libgl1-mesa-dev libwayland-dev
+            cmake_args: -DENABLE_X11=OFF -DENABLE_WAYLAND=ON
     runs-on: ubuntu-latest
 
     steps:
@@ -27,10 +35,10 @@ jobs:
     - name: Install dependencies
       run: |
           sudo apt update
-          sudo apt install ${{matrix.qt.packages}}
+          sudo apt install ${{matrix.packages}}
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DSCRONIFY_QTVERSION=${{matrix.qt.version}} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{github.workspace}}/build -DSCRONIFY_QTVERSION=${{matrix.qt_version}} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} ${{matrix.cmake_args}}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
