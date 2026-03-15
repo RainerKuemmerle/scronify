@@ -75,11 +75,19 @@ void ScreenHandler::AppQuit() {
 
 void ScreenHandler::ScreenAdded() {
   qDebug() << "Added Screen";
+  if (paused_) {
+    qDebug() << "Paused; skipping Added Screen actions";
+    return;
+  }
   Run(connect_);
 }
 
 void ScreenHandler::ScreenRemoved() {
   qDebug() << "Removed Screen";
+  if (paused_) {
+    qDebug() << "Paused; skipping Removed Screen actions";
+    return;
+  }
   Run(remove_);
 }
 
@@ -112,10 +120,17 @@ void ScreenHandler::CreateTrayIcon() {
   tray_icon_menu_ = new QMenu(this);
   tray_icon_menu_->addAction(rerun_startup_action_);
   tray_icon_menu_->addAction(show_action_);
+  pause_action_ = new QAction(tr("&Pause"), this);
+  pause_action_->setCheckable(true);
+  connect(pause_action_, &QAction::toggled, this, [this](bool checked) {
+    paused_ = checked;
+    qDebug() << (paused_ ? "Paused; skipping screen events"
+                         : "Resumed; handling screen events");
+  });
+  tray_icon_menu_->addAction(pause_action_);
   tray_icon_menu_->addSeparator();
   // TODO(Rainer): Add about dialog
   // TODO(Rainer): Add run option for screen tool like arandr
-  // TODO(Rainer): Add pause button to not execute actions
   tray_icon_menu_->addAction(quit_action_);
 
   tray_icon_ = new QSystemTrayIcon(this);
