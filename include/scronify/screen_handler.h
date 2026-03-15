@@ -41,6 +41,7 @@ class ScreenHandler : public QDialog {
   QAction* quit_action_ = nullptr;
   QAction* rerun_startup_action_ = nullptr;
   QAction* show_action_ = nullptr;
+  QAction* pause_action_ = nullptr;
 
   QMenu* tray_icon_menu_ = nullptr;
   QSystemTrayIcon* tray_icon_ = nullptr;
@@ -55,6 +56,7 @@ class ScreenHandler : public QDialog {
   ActionWidget* remove_widget_ = nullptr;
 
   DisplayEvent* event_ = nullptr;
+  bool paused_ = false;
 };
 
 }  // namespace scronify
