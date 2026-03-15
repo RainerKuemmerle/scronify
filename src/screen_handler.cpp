@@ -6,6 +6,8 @@
 #include <qcoreapplication.h>
 #include <qdebug.h>
 #include <qdialog.h>
+#include <qlabel.h>
+#include <qlineedit.h>
 #include <qlogging.h>
 #include <qmenu.h>
 #include <qobjectdefs.h>
@@ -32,6 +34,11 @@ namespace {
 constexpr double kSecToMs = 1000.;
 const QString kSettingsOrg = "scronify";
 const QString kSettingsApp = "scronify";
+
+bool IsWayland() {
+  const QString platform = QGuiApplication::platformName().toLower();
+  return platform.contains("wayland");
+}
 }  // namespace
 
 namespace scronify {
@@ -50,8 +57,7 @@ ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
 
   // Signals
   // Choose backend based on platform; default to X11 when unsure.
-  const QString platform = QGuiApplication::platformName().toLower();
-  if (platform.contains("wayland")) {
+  if (IsWayland()) {
     event_ = new WaylandEvent(this);
     qDebug() << "Using WaylandEvent backend";
   } else {
@@ -101,6 +107,18 @@ void ScreenHandler::CreateWidgets() {
   tab_widget->addTab(connect_widget_, tr("Connect Screen"));
   tab_widget->addTab(remove_widget_, tr("Remove Screen"));
 
+  // Settings tab: allow overriding the default screen tool command
+  auto* settings_tab = new QWidget(this);
+  auto* settings_layout = new QVBoxLayout(settings_tab);
+  auto* settings_label = new QLabel(
+      tr("Screen tool command (leave empty for default):"), settings_tab);
+  screen_tool_edit_ = new QLineEdit(settings_tab);
+  screen_tool_edit_->setPlaceholderText(tr("wdisplays  OR  arandr"));
+  settings_layout->addWidget(settings_label);
+  settings_layout->addWidget(screen_tool_edit_);
+  settings_layout->addStretch();
+  tab_widget->addTab(settings_tab, tr("Settings"));
+
   auto* main_layout = new QVBoxLayout(this);
   main_layout->addWidget(tab_widget);
   setLayout(main_layout);
@@ -115,28 +133,52 @@ void ScreenHandler::CreateTrayIcon() {
           [this]() { RunInstant(startup_); });
   show_action_ = new QAction(tr("&Configuration"), this);
   connect(show_action_, &QAction::triggered, this, &ScreenHandler::show);
+  auto* screen_tool_action = new QAction(tr("&Screen Tool"), this);
+  connect(screen_tool_action, &QAction::triggered, this,
+          &ScreenHandler::LaunchScreenTool);
+  pause_action_ = new QAction(tr("&Pause"), this);
+  pause_action_->setCheckable(true);
+  connect(pause_action_, &QAction::toggled, this, &ScreenHandler::PauseToggled);
 
   // Menu
   tray_icon_menu_ = new QMenu(this);
   tray_icon_menu_->addAction(rerun_startup_action_);
   tray_icon_menu_->addAction(show_action_);
-  pause_action_ = new QAction(tr("&Pause"), this);
-  pause_action_->setCheckable(true);
-  connect(pause_action_, &QAction::toggled, this, [this](bool checked) {
-    paused_ = checked;
-    qDebug() << (paused_ ? "Paused; skipping screen events"
-                         : "Resumed; handling screen events");
-  });
+  tray_icon_menu_->addAction(screen_tool_action);
   tray_icon_menu_->addAction(pause_action_);
   tray_icon_menu_->addSeparator();
   // TODO(Rainer): Add about dialog
-  // TODO(Rainer): Add run option for screen tool like arandr
   tray_icon_menu_->addAction(quit_action_);
 
   tray_icon_ = new QSystemTrayIcon(this);
   tray_icon_->setContextMenu(tray_icon_menu_);
   tray_icon_->setIcon(QIcon(":/doc/scronify-icon.png"));
   tray_icon_->show();
+}
+
+void ScreenHandler::LaunchScreenTool() {
+  QString cmd;
+  if (screen_tool_edit_) {
+    cmd = screen_tool_edit_->text().trimmed();
+  }
+  if (cmd.isEmpty()) {
+    cmd = IsWayland() ? "wdisplays" : "arandr";
+  }
+  QStringList command_list = util::SplitCommand(cmd);
+  if (command_list.isEmpty()) {
+    qDebug() << "Empty screen tool command.";
+    return;
+  }
+  const QString program = command_list.first();
+  command_list.removeFirst();
+  bool ok = QProcess::startDetached(program, command_list);
+  qDebug() << "Launched screen tool" << program << command_list << "ok:" << ok;
+}
+
+void ScreenHandler::PauseToggled(bool checked) {
+  paused_ = checked;
+  qDebug() << (paused_ ? "Paused; skipping screen events"
+                       : "Resumed; handling screen events");
 }
 
 void ScreenHandler::Run(const Action& action) {
@@ -214,6 +256,12 @@ void ScreenHandler::ReadSettings() {
   read_action_config("Startup", startup_);
   read_action_config("Connect", connect_);
   read_action_config("Remove", remove_);
+  settings.beginGroup("Settings");
+  if (screen_tool_edit_) {
+    screen_tool_edit_->setText(
+        settings.value("screen_tool", QString()).toString());
+  }
+  settings.endGroup();
 }
 
 void ScreenHandler::WriteSettings() {
@@ -229,6 +277,11 @@ void ScreenHandler::WriteSettings() {
   write_action_config("Startup", startup_);
   write_action_config("Connect", connect_);
   write_action_config("Remove", remove_);
+  settings.beginGroup("Settings");
+  if (screen_tool_edit_) {
+    settings.setValue("screen_tool", screen_tool_edit_->text());
+  }
+  settings.endGroup();
 }
 
 }  // namespace scronify
