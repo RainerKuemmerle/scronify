@@ -2,6 +2,7 @@
 
 #include <qaction.h>
 #include <qdialog.h>
+#include <qlineedit.h>
 #include <qmenu.h>
 #include <qscreen.h>
 #include <qsystemtrayicon.h>
@@ -24,6 +25,8 @@ class ScreenHandler : public QDialog {
   void ScreenAdded();
   void ScreenRemoved();
   void AppQuit();
+  void LaunchScreenTool();
+  void PauseToggled(bool checked);
 
  protected:
   void closeEvent(QCloseEvent* e) override;
@@ -54,6 +57,8 @@ class ScreenHandler : public QDialog {
 
   Action remove_;
   ActionWidget* remove_widget_ = nullptr;
+
+  QLineEdit* screen_tool_edit_ = nullptr;
 
   DisplayEvent* event_ = nullptr;
   bool paused_ = false;
