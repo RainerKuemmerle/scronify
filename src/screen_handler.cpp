@@ -27,7 +27,9 @@
 #include "scronify/display_event.h"
 #include "scronify/moc_screen_handler.cpp"  // NOLINT
 #include "scronify/split_command.h"
+#if defined(HAVE_WAYLAND)
 #include "scronify/wayland_event.h"
+#endif
 #if defined(HAVE_X11)
 #include "scronify/x11_event.h"
 #endif
