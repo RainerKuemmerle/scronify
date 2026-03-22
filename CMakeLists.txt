@@ -25,10 +25,10 @@ set(SCRONIFY_SRCS
     src/main.cpp)
 
 add_executable(scronify ${SCRONIFY_SRCS})
+find_package(PkgConfig QUIET)
 
 option(ENABLE_WAYLAND "Build with Wayland support" ON)
 if(ENABLE_WAYLAND)
-    find_package(PkgConfig)
     if(PkgConfig_FOUND)
         pkg_check_modules(WAYLAND QUIET wayland-client)
     else()
@@ -40,6 +40,56 @@ if(ENABLE_WAYLAND)
         target_include_directories(scronify PRIVATE ${WAYLAND_INCLUDE_DIRS})
         target_link_libraries(scronify PRIVATE ${WAYLAND_LIBRARIES})
         target_compile_definitions(scronify PRIVATE HAVE_WAYLAND)
+        # Add a small CLI utility to enumerate Wayland outputs and compute layout plans.
+        add_executable(wayland-placer src/wayland_placer.cpp src/wayland_display.cpp)
+        target_include_directories(wayland-placer PRIVATE ${WAYLAND_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
+        target_link_libraries(wayland-placer PRIVATE ${WAYLAND_LIBRARIES})
+        target_link_libraries(wayland-placer PRIVATE Qt${SCRONIFY_QTVERSION}::Core)
+        # Optionally generate and include wlr-output-management protocol bindings
+        find_program(WAYLAND_SCANNER wayland-scanner)
+        if(WAYLAND_SCANNER)
+            # Look for the exact protocol XML file in common locations or under a provided third_party tree.
+            set(WLR_XML_NAME "wlr-output-management-unstable-v1.xml")
+            set(WLR_XML_CANDIDATES
+                /usr/share/wayland-protocols/unstable/wlr-output-management-unstable-v1/${WLR_XML_NAME}
+                /usr/share/wayland-protocols/unstable/${WLR_XML_NAME}
+                /usr/share/wayland-protocols/${WLR_XML_NAME}
+                ${CMAKE_SOURCE_DIR}/third_party/wayland-protocols/${WLR_XML_NAME}
+            )
+
+            set(WLR_OUTPUT_MGMT_XML "")
+            foreach(candidate IN LISTS WLR_XML_CANDIDATES)
+                if(EXISTS ${candidate} AND NOT IS_DIRECTORY ${candidate})
+                    set(WLR_OUTPUT_MGMT_XML ${candidate})
+                    message(STATUS "Found wlr output-management protocol XML at ${candidate}")
+                    break()
+                endif()
+            endforeach()
+
+            if(WLR_OUTPUT_MGMT_XML)
+                set(GEN_DIR ${CMAKE_BINARY_DIR}/generated)
+                file(MAKE_DIRECTORY ${GEN_DIR})
+                set(WLR_OUT_HDR ${GEN_DIR}/wlr-output-management-unstable-v1-client-protocol.h)
+                set(WLR_OUT_C   ${GEN_DIR}/wlr-output-management-unstable-v1-client-protocol.c)
+                add_custom_command(
+                    OUTPUT ${WLR_OUT_HDR} ${WLR_OUT_C}
+                    COMMAND ${WAYLAND_SCANNER} client-header ${WLR_OUTPUT_MGMT_XML} ${WLR_OUT_HDR}
+                    COMMAND ${WAYLAND_SCANNER} code ${WLR_OUTPUT_MGMT_XML} ${WLR_OUT_C}
+                    DEPENDS ${WLR_OUTPUT_MGMT_XML}
+                    COMMENT "Generating wlr output-management client header and source"
+                    VERBATIM
+                )
+                add_custom_target(generate_wlr_output_mgmt_hdr_dep DEPENDS ${WLR_OUT_HDR} ${WLR_OUT_C})
+                add_dependencies(wayland-placer generate_wlr_output_mgmt_hdr_dep)
+                target_include_directories(wayland-placer PRIVATE ${GEN_DIR})
+                target_sources(wayland-placer PRIVATE ${WLR_OUT_C})
+                target_compile_definitions(wayland-placer PRIVATE HAVE_OUTPUT_MGMT)
+            else()
+                message(STATUS "wlr output-management XML not found; --apply will be disabled")
+            endif()
+        else()
+            message(STATUS "wayland-scanner not found; cannot check/generate wlr output-management bindings")
+        endif()
     else()
         message(STATUS "Wayland client not found; building without Wayland support")
     endif()
@@ -47,7 +97,6 @@ endif()
 
 option(ENABLE_X11 "Build with X11 support" ON)
 if(ENABLE_X11)
-    find_package(PkgConfig)
     if(PkgConfig_FOUND)
         pkg_check_modules(X11 QUIET x11)
         pkg_check_modules(XRANDR QUIET xrandr)
