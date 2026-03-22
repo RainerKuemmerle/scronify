@@ -6,10 +6,8 @@
 #include <qtimer.h>
 
 #include <cstdint>
-#include <unordered_map>
 
 #include "scronify/display_event.h"
-#include "scronify/event.h"
 
 namespace scronify {
 
@@ -24,18 +22,7 @@ class WaylandEvent : public DisplayEvent {
   void UpdateMetadata(std::uint64_t output, const OutputConnection& conn);
 
  protected:
-  std::unordered_map<std::uint64_t, Event> cached_output_;
-  QMutex cached_output_mutex_;
-
-  std::unordered_map<std::uint64_t, int> debounced_event_;
-  QMutex debounced_event_mutex_;
-
   void run() override;
-
-  void UpdateCache(std::uint64_t output, EventType type);
-  void SetupDebounce(std::uint64_t output);
-  void Debounced(std::uint64_t output);
-  void TickDebounce();
 };
 
 }  // namespace scronify

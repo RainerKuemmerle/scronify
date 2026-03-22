@@ -29,7 +29,6 @@ QString ConnectionToStr(int c) {
 }
 
 constexpr int kSleepMs = 500;
-constexpr int kDebounceTicks = 2;
 
 }  // namespace
 
@@ -167,60 +166,13 @@ void X11Event::Removed(std::uint64_t output, const ScreenHandle& /*handle*/) {
 
 void X11Event::UpdateCache(std::uint64_t output, EventType type,
                            const ScreenHandle* handle) {
-  QMutexLocker locker(&cached_output_mutex_);
-  cached_output_[output].type = type;
   if (handle) {
-    cached_output_[output].connection.output_name =
-        QString(handle->output_info->name).trimmed();
-    GetConnectionDetails(output, *handle, cached_output_[output].connection);
-  }
-  SetupDebounce(output);
-}
-
-void X11Event::SetupDebounce(std::uint64_t output) {
-  QMutexLocker locker(&debounced_event_mutex_);
-  debounced_event_[output] = kDebounceTicks;
-}
-
-void X11Event::TickDebounce() {
-  QMutexLocker locker(&debounced_event_mutex_);
-  if (debounced_event_.empty()) {
-    return;
-  }
-
-  std::vector<std::uint64_t> debounced;
-  for (auto& p : debounced_event_) {
-    p.second--;
-    if (p.second <= 0) {
-      debounced.push_back(p.first);
-      Debounced(p.first);
-    }
-  }
-
-  for (auto output : debounced) {
-    debounced_event_.erase(output);
-  }
-}
-
-void X11Event::Debounced(std::uint64_t output) {
-  QMutexLocker locker(&cached_output_mutex_);
-
-  auto found_it = cached_output_.find(output);
-  if (found_it == cached_output_.end()) {
-    qCritical() << "Logic error: Unable to find output's cache";
-    return;
-  }
-
-  switch (found_it->second.type) {
-    case EventType::kConnected:
-      emit ScreenAdded();
-      break;
-    case EventType::kRemoved:
-      emit ScreenRemoved();
-      break;
-    case EventType::kUnknown:
-      qCritical() << "Logic error: Unknown event type";
-      break;
+    DisplayEvent::UpdateCache(output, type, [&](Event& ev) {
+      ev.connection.output_name = QString(handle->output_info->name).trimmed();
+      GetConnectionDetails(output, *handle, ev.connection);
+    });
+  } else {
+    DisplayEvent::UpdateCache(output, type);
   }
 }
 
