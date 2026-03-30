@@ -47,13 +47,12 @@ bool LidIsClosed() {
     return false;
   }
   const auto entries = d.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-  for (const QString& name : entries) {
-    QString path = d.filePath(name + QLatin1String("/state"));
-    if (ReadFileContains(path, QStringLiteral("closed"))) {
-      return true;
-    }
-  }
-  return false;
+  bool any_closed =
+      std::any_of(entries.cbegin(), entries.cend(), [&](const QString& name) {
+        QString path = d.filePath(name + QLatin1String("/state"));
+        return ReadFileContains(path, QStringLiteral("closed"));
+      });
+  return any_closed;
 }
 
 int DeterminePrimaryIndex(const std::vector<OutputInfo>& outputs,
