@@ -25,6 +25,7 @@
 #include "scronify/action.h"
 #include "scronify/action_widget.h"
 #include "scronify/display_event.h"
+#include "scronify/lid_event.h"
 #include "scronify/moc_screen_handler.cpp"  // NOLINT
 #include "scronify/split_command.h"
 #if defined(HAVE_WAYLAND)
@@ -80,15 +81,22 @@ ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
   if (event_) {
     connect(event_, SIGNAL(ScreenAdded()), this, SLOT(ScreenAdded()));
     connect(event_, SIGNAL(ScreenRemoved()), this, SLOT(ScreenRemoved()));
-    connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(AppQuit()));
     event_->start();
   }
+
+  lid_event_ = new LidEvent(this);
+  connect(lid_event_, SIGNAL(LidClosed()), this, SLOT(LidChanged()));
+  connect(lid_event_, SIGNAL(LidOpened()), this, SLOT(LidChanged()));
+  connect(qApp, SIGNAL(aboutToQuit()), this, SLOT(AppQuit()));
 }
 
 void ScreenHandler::AppQuit() {
   qDebug() << "About to quit, waiting for thread";
   if (event_) {
     event_->Shutdown();
+  }
+  if (lid_event_) {
+    lid_event_->Shutdown();
   }
   qDebug() << "Byebye";
 }
@@ -111,15 +119,26 @@ void ScreenHandler::ScreenRemoved() {
   Run(remove_);
 }
 
+void ScreenHandler::LidChanged() {
+  qDebug() << "Lid toggled";
+  if (paused_) {
+    qDebug() << "Paused; skipping Lid actions";
+    return;
+  }
+  Run(lid_changed_);
+}
+
 void ScreenHandler::CreateWidgets() {
   startup_widget_ = new ActionWidget(nullptr, &startup_);
   connect_widget_ = new ActionWidget(nullptr, &connect_);
   remove_widget_ = new ActionWidget(nullptr, &remove_);
+  lid_changed_widget_ = new ActionWidget(nullptr, &lid_changed_);
 
   auto* tab_widget = new QTabWidget(this);
   tab_widget->addTab(startup_widget_, tr("Startup"));
   tab_widget->addTab(connect_widget_, tr("Connect Screen"));
   tab_widget->addTab(remove_widget_, tr("Remove Screen"));
+  tab_widget->addTab(lid_changed_widget_, tr("Lid Opened/Closed"));
 
   // Settings tab: allow overriding the default screen tool command
   auto* settings_tab = new QWidget(this);
@@ -240,6 +259,7 @@ void ScreenHandler::closeEvent(QCloseEvent* e) {
   startup_widget_->UpdateAction();
   connect_widget_->UpdateAction();
   remove_widget_->UpdateAction();
+  lid_changed_widget_->UpdateAction();
   WriteSettings();
   if (tray_icon_->isVisible()) {
     hide();
@@ -253,6 +273,7 @@ void ScreenHandler::showEvent(QShowEvent* e) {
     startup_widget_->UpdateWidget();
     connect_widget_->UpdateWidget();
     remove_widget_->UpdateWidget();
+    lid_changed_widget_->UpdateWidget();
   }
 }
 
@@ -270,6 +291,7 @@ void ScreenHandler::ReadSettings() {
   read_action_config("Startup", startup_);
   read_action_config("Connect", connect_);
   read_action_config("Remove", remove_);
+  read_action_config("Lid", lid_changed_);
   settings.beginGroup("Settings");
   if (screen_tool_edit_) {
     screen_tool_edit_->setText(
@@ -291,6 +313,7 @@ void ScreenHandler::WriteSettings() {
   write_action_config("Startup", startup_);
   write_action_config("Connect", connect_);
   write_action_config("Remove", remove_);
+  write_action_config("Lid", lid_changed_);
   settings.beginGroup("Settings");
   if (screen_tool_edit_) {
     settings.setValue("screen_tool", screen_tool_edit_->text());

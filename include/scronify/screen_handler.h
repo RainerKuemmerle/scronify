@@ -14,6 +14,7 @@
 namespace scronify {
 
 class DisplayEvent;
+class LidEvent;
 
 class ScreenHandler : public QDialog {
   Q_OBJECT
@@ -24,6 +25,7 @@ class ScreenHandler : public QDialog {
  public slots:  // NOLINT
   void ScreenAdded();
   void ScreenRemoved();
+  void LidChanged();
   void AppQuit();
   void LaunchScreenTool();
   void PauseToggled(bool checked);
@@ -58,9 +60,13 @@ class ScreenHandler : public QDialog {
   Action remove_;
   ActionWidget* remove_widget_ = nullptr;
 
+  Action lid_changed_;
+  ActionWidget* lid_changed_widget_ = nullptr;
+
   QLineEdit* screen_tool_edit_ = nullptr;
 
   DisplayEvent* event_ = nullptr;
+  LidEvent* lid_event_ = nullptr;
   bool paused_ = false;
 };
 
