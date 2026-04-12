@@ -122,7 +122,11 @@ target_link_libraries(scronify PRIVATE Qt${SCRONIFY_QTVERSION}::Core
     Qt${SCRONIFY_QTVERSION}::DBus)
 
 include(GNUInstallDirs)
-install(TARGETS scronify scronify-wayland-placer
+set(INSTALL_TARGETS scronify)
+if(TARGET scronify-wayland-placer)
+    list(APPEND INSTALL_TARGETS scronify-wayland-placer)
+endif()
+install(TARGETS ${INSTALL_TARGETS}
     EXPORT scronify
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
