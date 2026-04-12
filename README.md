@@ -43,6 +43,25 @@ The default is `ON`.
 
 Similarly, if you do not want to build the Wayland support, pass `-DENABLE_WAYLAND=OFF` to CMake. The default is `ON`.
 
+## scronify-wayland-placer
+
+`scronify-wayland-placer` is a small Wayland helper binary that enumerates available outputs, computes a simple stacked layout, and applies it through the `wlr-output-management` protocol.
+
+It is built when Wayland support is enabled and the Wayland client libraries are available. To actually apply the computed layout, the build also needs `wayland-scanner` and the `wlr-output-management-unstable-v1` protocol XML.
+
+Example usage:
+```
+scronify-wayland-placer --dry-run
+scronify-wayland-placer --primary-name eDP-1
+```
+
+Options:
+* `--dry-run` - print the planned output positions without applying them.
+* `--primary-name NAME` - treat the named output as the internal/bottom display.
+
+This tool is one example of a command to be called from the scronify actions.
+It is useful when you want to compute or apply a default stacked layout for Wayland outputs, especially for laptop+external monitor setups.
+
 ## The name
 
 `scronify` got its name roughly following the scheme below:
