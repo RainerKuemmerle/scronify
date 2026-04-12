@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SCRONIFY_QTVERSION "6" CACHE STRING "Which Qt version to use. 6|5")
-find_package(Qt${SCRONIFY_QTVERSION} COMPONENTS Core Widgets Concurrent REQUIRED)
+find_package(Qt${SCRONIFY_QTVERSION} COMPONENTS Core Widgets Concurrent DBus REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in
  ${CMAKE_CURRENT_SOURCE_DIR}/include/scronify/config.h)
@@ -22,6 +22,7 @@ set(SCRONIFY_SRCS
     src/screen_handler.cpp
     src/action_widget.cpp
     src/display_event.cpp
+    src/lid_event.cpp
     src/main.cpp)
 
 add_executable(scronify ${SCRONIFY_SRCS})
@@ -117,7 +118,8 @@ endif()
 target_compile_options(scronify PRIVATE -Wall -Wextra -pedantic)
 target_include_directories(scronify PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(scronify PRIVATE Qt${SCRONIFY_QTVERSION}::Core
-    Qt${SCRONIFY_QTVERSION}::Widgets)
+    Qt${SCRONIFY_QTVERSION}::Widgets
+    Qt${SCRONIFY_QTVERSION}::DBus)
 
 include(GNUInstallDirs)
 install(TARGETS scronify
