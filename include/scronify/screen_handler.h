@@ -37,8 +37,8 @@ class ScreenHandler : public QDialog {
   void CreateTrayIcon();
   void CreateWidgets();
 
-  void Run(const Action& action);
-  static void RunInstant(const Action& action);
+  void Run(const Action& action, const QString& action_name = QString());
+  void RunInstant(const Action& action, const QString& action_name = QString());
 
   void ReadSettings();
   void WriteSettings();

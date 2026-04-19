@@ -21,6 +21,18 @@ void DisplayEvent::UpdateCache(std::uint64_t output, EventType type,
   SetupDebounce(output);
 }
 
+std::vector<OutputConnection> DisplayEvent::OutputConnections() const {
+  QMutexLocker locker(&cached_output_mutex_);
+  std::vector<OutputConnection> outputs;
+  outputs.reserve(cached_output_.size());
+  for (const auto& entry : cached_output_) {
+    if (entry.second.type == EventType::kConnected) {
+      outputs.push_back(entry.second.connection);
+    }
+  }
+  return outputs;
+}
+
 void DisplayEvent::SetupDebounce(std::uint64_t output) {
   QMutexLocker locker(&debounced_event_mutex_);
   debounced_event_[output] = kDebounceTicks;

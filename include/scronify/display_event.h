@@ -29,11 +29,13 @@ class DisplayEvent : public QThread {
     wait();
   }
 
+  std::vector<OutputConnection> OutputConnections() const;
+
  protected:
   void run() override = 0;
 
   std::unordered_map<std::uint64_t, Event> cached_output_;
-  QMutex cached_output_mutex_;
+  mutable QMutex cached_output_mutex_;
 
   std::unordered_map<std::uint64_t, int> debounced_event_;
   QMutex debounced_event_mutex_;

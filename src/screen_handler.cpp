@@ -27,6 +27,7 @@
 #include "scronify/display_event.h"
 #include "scronify/lid_event.h"
 #include "scronify/moc_screen_handler.cpp"  // NOLINT
+#include "scronify/output_environment.h"
 #include "scronify/split_command.h"
 #if defined(HAVE_WAYLAND)
 #include "scronify/wayland_event.h"
@@ -58,7 +59,7 @@ ScreenHandler::ScreenHandler(QWidget* parent, Qt::WindowFlags f)
   ReadSettings();
 
   qDebug() << "Execute Startup";
-  Run(startup_);
+  Run(startup_, QStringLiteral("Startup"));
 
   // Signals
   // Choose backend based on platform; prefer Wayland when available.
@@ -107,7 +108,7 @@ void ScreenHandler::ScreenAdded() {
     qDebug() << "Paused; skipping Added Screen actions";
     return;
   }
-  Run(connect_);
+  Run(connect_, QStringLiteral("Connect"));
 }
 
 void ScreenHandler::ScreenRemoved() {
@@ -116,7 +117,7 @@ void ScreenHandler::ScreenRemoved() {
     qDebug() << "Paused; skipping Removed Screen actions";
     return;
   }
-  Run(remove_);
+  Run(remove_, QStringLiteral("Remove"));
 }
 
 void ScreenHandler::LidChanged() {
@@ -125,7 +126,7 @@ void ScreenHandler::LidChanged() {
     qDebug() << "Paused; skipping Lid actions";
     return;
   }
-  Run(lid_changed_);
+  Run(lid_changed_, QStringLiteral("Lid"));
 }
 
 void ScreenHandler::CreateWidgets() {
@@ -163,7 +164,7 @@ void ScreenHandler::CreateTrayIcon() {
   connect(quit_action_, &QAction::triggered, qApp, &QCoreApplication::quit);
   rerun_startup_action_ = new QAction(tr("&Rerun Startup"), this);
   connect(rerun_startup_action_, &QAction::triggered, this,
-          [this]() { RunInstant(startup_); });
+          [this]() { RunInstant(startup_, QStringLiteral("Startup")); });
   show_action_ = new QAction(tr("&Configuration"), this);
   connect(show_action_, &QAction::triggered, this, &ScreenHandler::show);
   auto* screen_tool_action = new QAction(tr("&Screen Tool"), this);
@@ -214,8 +215,10 @@ void ScreenHandler::PauseToggled(bool checked) {
                        : "Resumed; handling screen events");
 }
 
-void ScreenHandler::Run(const Action& action) {
-  auto run_helper = [&action] { ScreenHandler::RunInstant(action); };
+void ScreenHandler::Run(const Action& action, const QString& action_name) {
+  auto run_helper = [this, action, action_name] {
+    RunInstant(action, action_name);
+  };
 
   if (action.commands.isEmpty()) {
     return;
@@ -227,11 +230,25 @@ void ScreenHandler::Run(const Action& action) {
   }
 }
 
-void ScreenHandler::RunInstant(const Action& action) {
-  // TODO(Rainer): Add environment variables such as action, screen info
+void ScreenHandler::RunInstant(const Action& action,
+                               const QString& action_name) {
   if (action.commands.isEmpty()) {
     qDebug() << "Empty command.";
     return;
+  }
+
+  const QProcessEnvironment env =
+      event_ ? OutputEnvironment::FromOutputConnections(
+                   action_name, event_->OutputConnections())
+             : OutputEnvironment::FromOutputConnections(action_name, {});
+
+  // Debug the environment variables being passed to the commands.
+  qDebug() << "Environment for action" << action_name << ":";
+  for (const QString& var : env.keys()) {
+    if (!var.startsWith(QStringLiteral("SCRONIFY_"))) {
+      continue;
+    }
+    qDebug() << "  " << var << "=" << env.value(var);
   }
 
   for (const auto& cmd : action.commands) {
@@ -239,11 +256,17 @@ void ScreenHandler::RunInstant(const Action& action) {
       continue;
     }
     qDebug() << "Running " << cmd;
-    auto run_process = [&cmd] {
+    auto run_process = [cmd, env] {
       QStringList command_list = util::SplitCommand(cmd);
+      if (command_list.isEmpty()) {
+        return;
+      }
       const QString command = command_list.first();
       command_list.removeFirst();
-      QProcess::execute(command, command_list);
+      QProcess process;
+      process.setProcessEnvironment(env);
+      process.start(command, command_list);
+      process.waitForFinished();
     };
     QFuture<void> future = QtConcurrent::run(run_process);
   }

@@ -20,6 +20,7 @@ set(SCRONIFY_SRCS
     icons.qrc
     src/split_command.cpp
     src/screen_handler.cpp
+    src/output_environment.cpp
     src/action_widget.cpp
     src/display_event.cpp
     src/lid_event.cpp
@@ -75,7 +76,7 @@ if(ENABLE_WAYLAND)
                 add_custom_command(
                     OUTPUT ${WLR_OUT_HDR} ${WLR_OUT_C}
                     COMMAND ${WAYLAND_SCANNER} client-header ${WLR_OUTPUT_MGMT_XML} ${WLR_OUT_HDR}
-                    COMMAND ${WAYLAND_SCANNER} code ${WLR_OUTPUT_MGMT_XML} ${WLR_OUT_C}
+                    COMMAND ${WAYLAND_SCANNER} private-code ${WLR_OUTPUT_MGMT_XML} ${WLR_OUT_C}
                     DEPENDS ${WLR_OUTPUT_MGMT_XML}
                     COMMENT "Generating wlr output-management client header and source"
                     VERBATIM
@@ -87,6 +88,43 @@ if(ENABLE_WAYLAND)
                 target_compile_definitions(scronify-wayland-placer PRIVATE HAVE_OUTPUT_MGMT)
             else()
                 message(STATUS "wlr output-management XML not found; --apply will be disabled")
+            endif()
+
+            set(XDG_XML_NAME "xdg-output-unstable-v1.xml")
+            set(XDG_XML_CANDIDATES
+                /usr/share/wayland-protocols/unstable/xdg-output/${XDG_XML_NAME}
+                /usr/share/wayland-protocols/unstable/${XDG_XML_NAME}
+                /usr/share/wayland-protocols/${XDG_XML_NAME}
+                ${CMAKE_SOURCE_DIR}/third_party/wayland-protocols/${XDG_XML_NAME}
+            )
+
+            set(XDG_OUTPUT_XML "")
+            foreach(candidate IN LISTS XDG_XML_CANDIDATES)
+                if(EXISTS ${candidate} AND NOT IS_DIRECTORY ${candidate})
+                    set(XDG_OUTPUT_XML ${candidate})
+                    message(STATUS "Found xdg-output protocol XML at ${candidate}")
+                    break()
+                endif()
+            endforeach()
+
+            if(XDG_OUTPUT_XML)
+                set(XDG_OUT_HDR ${GEN_DIR}/xdg-output-unstable-v1-client-protocol.h)
+                set(XDG_OUT_C ${GEN_DIR}/xdg-output-unstable-v1-client-protocol.c)
+                add_custom_command(
+                    OUTPUT ${XDG_OUT_HDR} ${XDG_OUT_C}
+                    COMMAND ${WAYLAND_SCANNER} client-header ${XDG_OUTPUT_XML} ${XDG_OUT_HDR}
+                    COMMAND ${WAYLAND_SCANNER} private-code ${XDG_OUTPUT_XML} ${XDG_OUT_C}
+                    DEPENDS ${XDG_OUTPUT_XML}
+                    COMMENT "Generating xdg-output client header and source"
+                    VERBATIM
+                )
+                add_custom_target(generate_xdg_output_hdr_dep DEPENDS ${XDG_OUT_HDR} ${XDG_OUT_C})
+                add_dependencies(scronify generate_xdg_output_hdr_dep)
+                target_include_directories(scronify PRIVATE ${GEN_DIR})
+                target_sources(scronify PRIVATE ${XDG_OUT_C})
+                target_compile_definitions(scronify PRIVATE HAVE_XDG_OUTPUT)
+            else()
+                message(STATUS "xdg-output XML not found; Wayland output names will remain unavailable")
             endif()
         else()
             message(STATUS "wayland-scanner not found; cannot check/generate wlr output-management bindings")

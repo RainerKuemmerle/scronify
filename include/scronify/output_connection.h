@@ -6,6 +6,7 @@ namespace scronify {
 
 struct OutputConnection {
   QString output_name;
+  QString description;
   QString vendor;
   QString product;
   QString serial;
